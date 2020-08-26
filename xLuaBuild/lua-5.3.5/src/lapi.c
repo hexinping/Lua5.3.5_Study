@@ -93,7 +93,12 @@ static void growstack (lua_State *L, void *ud) {
   luaD_growstack(L, size);
 }
 
-
+/**
+ * 检查lua_State的大小，如果栈小了，则扩容（默认栈大小：栈的默认尺寸是35）
+ * 说明：只会不断扩容，不会缩小
+ * 32/64位机器栈最大：1000000
+ * 16位机器栈最大：15000
+ */
 LUA_API int lua_checkstack (lua_State *L, int n) {
   int res;
   CallInfo *ci = L->ci;
@@ -105,7 +110,7 @@ LUA_API int lua_checkstack (lua_State *L, int n) {
     int inuse = cast_int(L->top - L->stack) + EXTRA_STACK;
     if (inuse > LUAI_MAXSTACK - n)  /* can grow without overflow? */
       res = 0;  /* no */
-    else  /* try to grow stack */
+    else  /* try to grow stack  尝试去扩容*/
       res = (luaD_rawrunprotected(L, &growstack, &n) == LUA_OK);
   }
   if (res && ci->top < L->top + n)

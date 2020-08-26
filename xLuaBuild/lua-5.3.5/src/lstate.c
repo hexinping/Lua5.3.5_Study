@@ -156,18 +156,20 @@ static void stack_init (lua_State *L1, lua_State *L) {
   for (i = 0; i < BASIC_STACK_SIZE; i++)
     setnilvalue(L1->stack + i);  /* erase new stack */
   L1->top = L1->stack;
-  L1->stack_last = L1->stack + L1->stacksize - EXTRA_STACK;
+  L1->stack_last = L1->stack + L1->stacksize - EXTRA_STACK; //栈顶默认到35，空出5个做buf？
   /* initialize first ci */
   ci = &L1->base_ci;
   ci->next = ci->previous = NULL;
   ci->callstatus = 0;
-  ci->func = L1->top;
+  ci->func = L1->top;  //把指向正在调用操作的栈底位置 == 指向当前栈顶
   setnilvalue(L1->top++);  /* 'function' entry for this 'ci' */
-  ci->top = L1->top + LUA_MINSTACK;
+  ci->top = L1->top + LUA_MINSTACK;//指向调用栈的栈顶部分 == 指向到L1->top +20的位置
   L1->ci = ci;
 }
 
-
+/*
+  释放栈结构内存
+*/
 static void freestack (lua_State *L) {
   if (L->stack == NULL)
     return;  /* stack not completely built yet */
@@ -246,10 +248,13 @@ static void preinit_thread (lua_State *L, global_State *g) {
 }
 
 
+/**
+ * 释放Lua栈结构
+ */
 static void close_state (lua_State *L) {
   global_State *g = G(L);
-  luaF_close(L, L->stack);  /* close all upvalues for this thread */
-  luaC_freeallobjects(L);  /* collect all objects */
+  luaF_close(L, L->stack);  /* close all upvalues for this thread  释放Lua栈的upvalues*/
+  luaC_freeallobjects(L);  /* collect all objects   释放全部对象 */
   if (g->version)  /* closing a fully built state? */
     luai_userstateclose(L);
   luaM_freearray(L, G(L)->strt.hash, G(L)->strt.size);
@@ -359,7 +364,9 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   return L;
 }
 
-
+/*
+  关闭Lua栈
+*/
 LUA_API void lua_close (lua_State *L) {
   L = G(L)->mainthread;  /* only the main thread can be closed */
   lua_lock(L);
