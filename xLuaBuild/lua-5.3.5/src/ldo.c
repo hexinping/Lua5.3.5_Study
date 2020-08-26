@@ -155,6 +155,10 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
 ** Stack reallocation
 ** ===================================================================
 */
+
+/**
+ * 拷贝到新的栈结构上
+ */
 static void correctstack (lua_State *L, TValue *oldstack) {
   CallInfo *ci;
   UpVal *up;
@@ -173,28 +177,32 @@ static void correctstack (lua_State *L, TValue *oldstack) {
 /* some space for error handling */
 #define ERRORSTACKSIZE	(LUAI_MAXSTACK + 200)
 
-
+/**
+ * 重新分配一块statck内容，并且进行拷贝
+ */
 void luaD_reallocstack (lua_State *L, int newsize) {
-  TValue *oldstack = L->stack;
+  TValue *oldstack = L->stack; //栈底位置
   int lim = L->stacksize;
   lua_assert(newsize <= LUAI_MAXSTACK || newsize == ERRORSTACKSIZE);
   lua_assert(L->stack_last - L->stack == L->stacksize - EXTRA_STACK);
-  luaM_reallocvector(L, L->stack, L->stacksize, newsize, TValue);
+  luaM_reallocvector(L, L->stack, L->stacksize, newsize, TValue); //重新分配了一块内存
   for (; lim < newsize; lim++)
     setnilvalue(L->stack + lim); /* erase new segment */
-  L->stacksize = newsize;
-  L->stack_last = L->stack + newsize - EXTRA_STACK;
+  L->stacksize = newsize; //调整栈大小
+  L->stack_last = L->stack + newsize - EXTRA_STACK; //L->stack 栈底
   correctstack(L, oldstack);
 }
 
-
+/**
+ * 对lua_State进行扩容
+ */
 void luaD_growstack (lua_State *L, int n) {
-  int size = L->stacksize;
+  int size = L->stacksize;  //栈大小，默认40个
   if (size > LUAI_MAXSTACK)  /* error after extra size? */
     luaD_throw(L, LUA_ERRERR);
   else {
-    int needed = cast_int(L->top - L->stack) + n + EXTRA_STACK;
-    int newsize = 2 * size;
+    int needed = cast_int(L->top - L->stack) + n + EXTRA_STACK; //先计算栈顶到栈底的差值 + n + 5个空闲的buff位置
+    int newsize = 2 * size; // 原始大小*2
     if (newsize > LUAI_MAXSTACK) newsize = LUAI_MAXSTACK;
     if (newsize < needed) newsize = needed;
     if (newsize > LUAI_MAXSTACK) {  /* stack overflow? */
@@ -202,7 +210,7 @@ void luaD_growstack (lua_State *L, int n) {
       luaG_runerror(L, "stack overflow");
     }
     else
-      luaD_reallocstack(L, newsize);
+      luaD_reallocstack(L, newsize);  //重新分配栈空间
   }
 }
 

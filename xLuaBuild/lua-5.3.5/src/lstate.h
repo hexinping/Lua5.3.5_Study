@@ -90,8 +90,8 @@ typedef struct stringtable {
 ** function can be called with the correct top.
 */
 typedef struct CallInfo {
-  StkId func;  /* function index in the stack */
-  StkId	top;  /* top for this function */
+  StkId func;  /* function index in the stack 当前调用栈的调用指针处 */
+  StkId	top;  /* top for this function 调用栈的栈顶 */
   struct CallInfo *previous, *next;  /* dynamic call link */
   union {
     struct {  /* only for Lua functions */
