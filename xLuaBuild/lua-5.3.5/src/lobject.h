@@ -303,11 +303,11 @@ typedef TValue *StkId;  /* index to stack elements */
 typedef struct TString {
   CommonHeader;
   lu_byte extra;  /* reserved words for short strings; "has hash" for longs */
-  lu_byte shrlen;  /* length for short strings */
-  unsigned int hash;
+  lu_byte shrlen;  /* 短字符串长度 length for short strings */
+  unsigned int hash; //字符串table 索引值
   union {
-    size_t lnglen;  /* length for long strings */
-    struct TString *hnext;  /* linked list for hash table */
+    size_t lnglen;  /* length for long strings 长字符串存储形式*/
+    struct TString *hnext;  /* 链表形式存储下一个TSring，短字符串用到 linked list for hash table */
   } u;
 } TString;
 

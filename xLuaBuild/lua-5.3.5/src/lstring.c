@@ -99,6 +99,7 @@ void luaS_resize (lua_State *L, int newsize) {
 /*
 ** Clear API string cache. (Entries cannot be empty, so fill them with
 ** a non-collectable string.)
+清楚缓存
 */
 void luaS_clearcache (global_State *g) {
   int i, j;
@@ -112,15 +113,16 @@ void luaS_clearcache (global_State *g) {
 
 /*
 ** Initialize the string table and the string cache
+初始化字符串链表和字符串缓存
 */
 void luaS_init (lua_State *L) {
   global_State *g = G(L);
   int i, j;
-  luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
+  luaS_resize(L, MINSTRTABSIZE);  /*  默认大小128 字符串table initial size of string table */
   /* pre-create memory-error message */
-  g->memerrmsg = luaS_newliteral(L, MEMERRMSG);
+  g->memerrmsg = luaS_newliteral(L, MEMERRMSG); //错误处理字符串
   luaC_fix(L, obj2gco(g->memerrmsg));  /* it should never be collected */
-  for (i = 0; i < STRCACHE_N; i++)  /* fill cache with valid strings */
+  for (i = 0; i < STRCACHE_N; i++)  /* 缓存表中填充默认支付 fill cache with valid strings */
     for (j = 0; j < STRCACHE_M; j++)
       g->strcache[i][j] = g->memerrmsg;
 }
@@ -163,17 +165,18 @@ void luaS_remove (lua_State *L, TString *ts) {
 
 /*
 ** checks whether short string exists and reuses it or creates a new one
+检查短字符串是否存在，并重用它或创建一个新字符串
 */
 static TString *internshrstr (lua_State *L, const char *str, size_t l) {
   TString *ts;
   global_State *g = G(L);
   unsigned int h = luaS_hash(str, l, g->seed);
-  TString **list = &g->strt.hash[lmod(h, g->strt.size)];
+  TString **list = &g->strt.hash[lmod(h, g->strt.size)]; // 找到链表头部
   lua_assert(str != NULL);  /* otherwise 'memcmp'/'memcpy' are undefined */
   for (ts = *list; ts != NULL; ts = ts->u.hnext) {
     if (l == ts->shrlen &&
         (memcmp(str, getstr(ts), l * sizeof(char)) == 0)) {
-      /* found! */
+      /* found! 缓存里找到了*/
       if (isdead(g, ts))  /* dead (but not collected yet)? */
         changewhite(ts);  /* resurrect it */
       return ts;
@@ -194,17 +197,21 @@ static TString *internshrstr (lua_State *L, const char *str, size_t l) {
 
 
 /*
-** new string (with explicit length)
-*/
+ ** new string (with explicit length)
+ ** 创建一个存新的字符串，不带缓存
+ ** 字符串不能超过最大限制
+ ** 新的字符串会memcpy拷贝一个副本，挂载到TString结构上
+ */
 TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
-  if (l <= LUAI_MAXSHORTLEN)  /* short string? */
+  if (l <= LUAI_MAXSHORTLEN)  /* short string? 40字节  短字符串*/
     return internshrstr(L, str, l);
   else {
+    // 长字符串
     TString *ts;
     if (l >= (MAX_SIZE - sizeof(TString))/sizeof(char))
       luaM_toobig(L);
     ts = luaS_createlngstrobj(L, l);
-    memcpy(getstr(ts), str, l * sizeof(char));
+    memcpy(getstr(ts), str, l * sizeof(char)); //内存拷贝副本
     return ts;
   }
 }
@@ -215,6 +222,20 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
 ** cache (using the string address as a key). The cache can contain
 ** only zero-terminated strings, so it is safe to use 'strcmp' to
 ** check hits.
+
+ ** 创建一个新的字符串，带缓存方式
+ ** 会调用luaS_newlstr方法
+ ** 1. 先通过字符串，获取字符串hash值
+ ** 2. 通过hash值取字符串，如果相同的字符串已经存在，则复用
+ ** 3. 否则创建一个新的字符串
+ **
+ ** 字符串Table表，通过字符串的hash值找到list
+ ** 但是list长度是STRCACHE_M=2，list比较小，估计作者认为hash冲突的概率会非常小
+ ** 同时每次都会将最早的元素element淘汰出去
+*/
+
+/*
+  当调用*luaS_new函数，字符串存储会走缓存方式；当单独调用luaS_newlstr函数，短字符串会统一管理，但是长字符串就没有统一地方管理
 */
 TString *luaS_new (lua_State *L, const char *str) {
   unsigned int i = point2uint(str) % STRCACHE_N;  /* hash */

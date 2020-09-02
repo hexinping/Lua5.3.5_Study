@@ -152,8 +152,8 @@ typedef struct global_State {
   lu_mem GCestimate;  /* an estimate of the non-garbage memory in use */
 
   /* 字符串管理 */
-  stringtable strt;  /* hash table for strings */
-  TString* strcache[STRCACHE_N][STRCACHE_M];  /* cache for strings in API */
+  stringtable strt;  /* hash table for strings 链表方式存储（短字符串 长度<40）*/
+  TString* strcache[STRCACHE_N][STRCACHE_M];  /* cache for strings in API  HashMap 缓存方式 */
 
   TValue l_registry;
   unsigned int seed;  /* randomized seed for hashes */
