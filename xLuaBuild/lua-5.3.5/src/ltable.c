@@ -343,7 +343,13 @@ static void auxsetnode (lua_State *L, void *ud) {
   setnodevector(L, asn->t, asn->nhsize);
 }
 
-
+/**
+ * 重新设置Table的大小
+ * 说明：luaH_new方法仅仅是初始化了一个Table，真正Table容器大小，需要调用此方法实现
+ *
+ * nasize：数组节点的大小
+ * nhsize：hash节点的大小
+ */
 void luaH_resize (lua_State *L, Table *t, unsigned int nasize,
                                           unsigned int nhsize) {
   unsigned int i;
@@ -465,12 +471,19 @@ static Node *getfreepos (Table *t) {
 ** position or not: if it is not, move colliding node to an empty place and
 ** put new key in its main position; otherwise (colliding node is in its main
 ** position), new key goes to an empty position.
+
+
+插入一个新key到hash 表中，首先，检查key对应的main position是否是空的，如果不是，
+则检查冲突的node是不是main position，如果不是，就应该将冲突的node移到一个新的空位置，
+将新key放到main position。如果冲突的点就已经是main position，则将新key放到一个空白点
+
 */
+//需要取检查hash节点，并且判断是否有hash冲突，如果节点数量不够并且要扩容等一系列操作。
 TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
   Node *mp;
   TValue aux;
-  if (ttisnil(key)) luaG_runerror(L, "table index is nil");
-  else if (ttisfloat(key)) {
+  if (ttisnil(key)) luaG_runerror(L, "table index is nil"); //检查key值是否为空值
+  else if (ttisfloat(key)) { //浮点类型，如果可以转int的话，强制转成int
     lua_Integer k;
     if (luaV_tointeger(key, &k, 0)) {  /* does index fit in an integer? */
       setivalue(&aux, k);
@@ -479,18 +492,19 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
     else if (luai_numisnan(fltvalue(key)))
       luaG_runerror(L, "table index is NaN");
   }
-  mp = mainposition(t, key);
-  if (!ttisnil(gval(mp)) || isdummy(t)) {  /* main position is taken? */
+  mp = mainposition(t, key); //拿到key 可以存放的的node
+  if (!ttisnil(gval(mp)) || isdummy(t)) {  /* main position is taken? */ 
+    /* 如果存在 */
     Node *othern;
-    Node *f = getfreepos(t);  /* get a free place */
+    Node *f = getfreepos(t);  /* 扩容 get a free place */
     if (f == NULL) {  /* cannot find a free place? */
-      rehash(L, t, key);  /* grow table */
+      rehash(L, t, key);  /* 扩容 grow table */
       /* whatever called 'newkey' takes care of TM cache */
-      return luaH_set(L, t, key);  /* insert key into grown table */
+      return luaH_set(L, t, key);  /* 在Table上设置一个值，然后返回TValue对象，insert key into grown table */
     }
     lua_assert(!isdummy(t));
     othern = mainposition(t, gkey(mp));
-    if (othern != mp) {  /* is colliding node out of its main position? */
+    if (othern != mp) {  /* is colliding node out of its main position? 此处需要解决hash冲突 */
       /* yes; move colliding node into free position */
       while (othern + gnext(othern) != mp)  /* find previous */
         othern += gnext(othern);
@@ -511,22 +525,25 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
       mp = f;
     }
   }
-  setnodekey(L, &mp->i_key, key);
+  setnodekey(L, &mp->i_key, key); //拷贝到node上
   luaC_barrierback(L, t, key);
   lua_assert(ttisnil(gval(mp)));
-  return gval(mp);
+  return gval(mp); //返回Tvalue方法 Node->i_val
 }
 
 
 /*
 ** search function for integers
+  
+  int 类型 ==》 优先从数组部分查找，在去哈希部分找
+  
 */
 const TValue *luaH_getint (Table *t, lua_Integer key) {
   /* (1 <= key && key <= t->sizearray) */
-  if (l_castS2U(key) - 1 < t->sizearray)
+  if (l_castS2U(key) - 1 < t->sizearray) //数组部分
     return &t->array[key - 1];
   else {
-    Node *n = hashint(t, key);
+    Node *n = hashint(t, key); //哈希部分
     for (;;) {  /* check whether 'key' is somewhere in the chain */
       if (ttisinteger(gkey(n)) && ivalue(gkey(n)) == key)
         return gval(n);  /* that's it */
@@ -543,9 +560,10 @@ const TValue *luaH_getint (Table *t, lua_Integer key) {
 
 /*
 ** search function for short strings
+短字符串 --》 优先从table的哈希部分中找，
 */
 const TValue *luaH_getshortstr (Table *t, TString *key) {
-  Node *n = hashstr(t, key);
+  Node *n = hashstr(t, key); //
   lua_assert(key->tt == LUA_TSHRSTR);
   for (;;) {  /* check whether 'key' is somewhere in the chain */
     const TValue *k = gkey(n);
@@ -593,6 +611,7 @@ const TValue *luaH_getstr (Table *t, TString *key) {
 
 /*
 ** main search function
+  短字符串 int nil float ==》
 */
 const TValue *luaH_get (Table *t, const TValue *key) {
   switch (ttype(key)) {
@@ -614,6 +633,14 @@ const TValue *luaH_get (Table *t, const TValue *key) {
 /*
 ** beware: when using this function you probably need to check a GC
 ** barrier and invalidate the TM cache.
+
+在Table上设置一个值，然后返回TValue对象
+
+** 说明：
+** 优先在t->array数组上查询，是否有节点可以存储，如果key小于arraysize，则放置在array上
+** 调用luaH_newkey，在table上寻找可以设置key的node节点，设置成功后，返回Node->i_val
+** node节点k=v形式
+
 */
 TValue *luaH_set (lua_State *L, Table *t, const TValue *key) {
   const TValue *p = luaH_get(t, key);
@@ -623,6 +650,13 @@ TValue *luaH_set (lua_State *L, Table *t, const TValue *key) {
 }
 
 
+/**
+ * 在Table上设置key为数字类型的节点
+ * 说明：
+ * 1. 优先在t->array数组上查询，是否有节点可以存储，如果key小于arraysize，则放置在array上
+ * 2. 如果数字大于arraysize，则在Node节点上处理
+ * 3. 如果没有查询到p，则调用luaH_newkey创建一个新的Node节点用于存储value
+ */
 void luaH_setint (lua_State *L, Table *t, lua_Integer key, TValue *value) {
   const TValue *p = luaH_getint(t, key);
   TValue *cell;
