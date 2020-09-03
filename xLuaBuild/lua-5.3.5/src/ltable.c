@@ -417,15 +417,23 @@ static void rehash (lua_State *L, Table *t, const TValue *ek) {
 ** }=============================================================
 */
 
-
+/**
+ * 创建一个table
+ * table内容由luaC_newobj创建分配，并且会挂载到global_State->frealloc上统一管理
+ *
+ * Table使用方式：
+ * 数组结构：fruits = {"banana","orange","apple"}
+ * 节点结构：a = {x=12,mutou=99,[3]="hello"}
+ * table中带table结构：local a = {{x = 1,y=2},{x = 3,y = 10}}
+ */
 Table *luaH_new (lua_State *L) {
-  GCObject *o = luaC_newobj(L, LUA_TTABLE, sizeof(Table));
-  Table *t = gco2t(o);
+  GCObject *o = luaC_newobj(L, LUA_TTABLE, sizeof(Table)); //分配一个GCObject类型的内容，对象在 global_State->frealloc 上管理
+  Table *t = gco2t(o); //转成table类型对象
   t->metatable = NULL;
   t->flags = cast_byte(~0);
   t->array = NULL;
   t->sizearray = 0;
-  setnodevector(L, t, 0);
+  setnodevector(L, t, 0);// 数组和哈希初始化
   return t;
 }
 

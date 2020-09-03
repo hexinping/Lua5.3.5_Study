@@ -488,21 +488,34 @@ typedef union TKey {
 	  (void)L; checkliveness(L,io_); }
 
 
+/**
+ * 节点格式 k=>v
+ * 节点结构：a = {x=12,mutou=99,[3]="hello"}
+ */
 typedef struct Node {
   TValue i_val;
-  TKey i_key;
+  TKey i_key; //解决hash冲突，通过TKey结构体中的next链表指针实现 /* 链表 管理Hash Node，用于处理hash 冲突 for chaining (offset for next node) */
 } Node;
 
-
+/**
+ * Table数据结构，分两种存储类型：数组节点和hash节点
+ * 数组节点：sizearray为数字长度，一般存储key值在长度范围内的结果集
+ * hash节点：k=>v结构，能够存储各类复杂对象结构
+ *
+ * LUA语言用法：
+ * 数组节点：fruits = {"banana","orange","apple"}
+ * hash节点：a = {x=12,mutou=99,[3]="hello"}
+ * table中带table结构：local a = {{x = 1,y=2},{x = 3,y = 10}}
+ */
 typedef struct Table {
   CommonHeader;
   lu_byte flags;  /* 1<<p means tagmethod(p) is not present */
   lu_byte lsizenode;  /* log2 of size of 'node' array */
   unsigned int sizearray;  /* size of 'array' array */
-  TValue *array;  /* array part */
-  Node *node;
-  Node *lastfree;  /* any free position is before this position */
-  struct Table *metatable;
+  TValue *array;  /* array part  通过数组方式，实现值的存储*/
+  Node *node; //通过Hash表的方式来存储Node节点, Node *node 为Hash节点的头部
+  Node *lastfree;  /* any free position is before this position  ==> Node *lastfree为 hash节点，最后一个空闲节点*/
+  struct Table *metatable; //元表，重载操作需要用
   GCObject *gclist;
 } Table;
 
