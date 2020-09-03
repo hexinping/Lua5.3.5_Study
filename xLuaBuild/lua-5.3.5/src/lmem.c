@@ -45,6 +45,11 @@
 #define MINSIZEARRAY	4
 
 
+/**
+ * 内存扩容
+ * 1. 扩容不能超过limit限制，如果超过了，则扩容到limit
+ * 2. 一般扩容按照*2系数去扩
+ */
 void *luaM_growaux_ (lua_State *L, void *block, int *size, size_t size_elems,
                      int limit, const char *what) {
   void *newblock;
@@ -59,7 +64,7 @@ void *luaM_growaux_ (lua_State *L, void *block, int *size, size_t size_elems,
     if (newsize < MINSIZEARRAY)
       newsize = MINSIZEARRAY;  /* minimum size */
   }
-  newblock = luaM_reallocv(L, block, *size, newsize, size_elems);
+  newblock = luaM_reallocv(L, block, *size, newsize, size_elems); //最后调用的还是luaM_realloc_方法，然后调用l_alloc方法
   *size = newsize;  /* update only when everything else is OK */
   return newblock;
 }
@@ -70,9 +75,13 @@ l_noret luaM_toobig (lua_State *L) {
 }
 
 
-
 /*
 ** generic allocation routine.
+** 内存分配函数
+** 内容块最终会调用*g->frealloc（*l_alloc）函数处理
+**
+** osize = 老的内存块大小  这参数没用上
+**
 */
 void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
   void *newblock;
@@ -83,7 +92,8 @@ void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
   if (nsize > realosize && g->gcrunning)
     luaC_fullgc(L, 1);  /* force a GC whenever possible */
 #endif
-  newblock = (*g->frealloc)(g->ud, block, osize, nsize);
+  //g->frealloc（*l_alloc）函数处理
+  newblock = (*g->frealloc)(g->ud, block, osize, nsize); //  *g->frealloc 指的就是创建lua_newstate时候赋给的函数指针l_alloc 
   if (newblock == NULL && nsize > 0) {
     lua_assert(nsize > realosize);  /* cannot fail when shrinking a block */
     if (g->version) {  /* is state fully built? */

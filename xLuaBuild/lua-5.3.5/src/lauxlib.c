@@ -1005,14 +1005,17 @@ LUALIB_API const char *luaL_gsub (lua_State *L, const char *s, const char *p,
 }
 
 
+/**
+ * 内存分配基础函数
+ */
 static void *l_alloc (void *ud, void *ptr, size_t osize, size_t nsize) {
   (void)ud; (void)osize;  /* not used */
   if (nsize == 0) {
-    free(ptr);
+    free(ptr); //释放指针
     return NULL;
   }
   else
-    return realloc(ptr, nsize);
+    return realloc(ptr, nsize); //分配内存
 }
 
 
@@ -1023,8 +1026,11 @@ static int panic (lua_State *L) {
 }
 
 
+/**
+ * 创建一个全局状态机
+ */
 LUALIB_API lua_State *luaL_newstate (void) {
-  lua_State *L = lua_newstate(l_alloc, NULL);
+  lua_State *L = lua_newstate(l_alloc, NULL); //将l_alloc函数对象赋值到g->frealloc
   if (L) lua_atpanic(L, &panic);
   return L;
 }

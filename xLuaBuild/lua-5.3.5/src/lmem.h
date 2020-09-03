@@ -38,16 +38,25 @@
 #define luaM_reallocvchar(L,b,on,n)  \
     cast(char *, luaM_realloc_(L, (b), (on)*sizeof(char), (n)*sizeof(char)))
 
+/* 
+  内存释放操作  luaM_freemem luaM_free luaM_freearray
+ 
+  调用luaM_realloc_，nsize设置为0。
+  当调用底层l_alloc函数的时候，回去判断nsize=0的时候，调用操作系统的free函数自动回收内存
+*/
 #define luaM_freemem(L, b, s)	luaM_realloc_(L, (b), (s), 0)
 #define luaM_free(L, b)		luaM_realloc_(L, (b), sizeof(*(b)), 0)
 #define luaM_freearray(L, b, n)   luaM_realloc_(L, (b), (n)*sizeof(*(b)), 0)
 
-#define luaM_malloc(L,s)	luaM_realloc_(L, NULL, 0, (s))
-#define luaM_new(L,t)		cast(t *, luaM_malloc(L, sizeof(t)))
+/**
+ * 内存分配函数 luaM_malloc  luaM_new luaM_newvector luaM_newobject
+ */
+#define luaM_malloc(L,s)	luaM_realloc_(L, NULL, 0, (s)) //直接分配一块固定大小的内存
+#define luaM_new(L,t)		cast(t *, luaM_malloc(L, sizeof(t)))  //分配一个固定类型大小的内存
 #define luaM_newvector(L,n,t) \
-		cast(t *, luaM_reallocv(L, NULL, 0, n, sizeof(t)))
+		cast(t *, luaM_reallocv(L, NULL, 0, n, sizeof(t))) //分配多个固定类型的内容块，例如Table 的array
 
-#define luaM_newobject(L,tag,s)	luaM_realloc_(L, NULL, tag, (s))
+#define luaM_newobject(L,tag,s)	luaM_realloc_(L, NULL, tag, (s)) //分配一个固定类型的对象
 
 #define luaM_growvector(L,v,nelems,size,t,limit,e) \
           if ((nelems)+1 > (size)) \
