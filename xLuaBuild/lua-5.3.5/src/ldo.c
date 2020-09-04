@@ -503,6 +503,7 @@ static void stackerror (lua_State *L) {
 void luaD_call (lua_State *L, StkId func, int nResults) {
   if (++L->nCcalls >= LUAI_MAXCCALLS)
     stackerror(L);
+  //luaD_precall预处理函数主要会创建一个调用栈CallInfo，管理函数调用时的信息
   if (!luaD_precall(L, func, nResults))  /* is a Lua function? */
     luaV_execute(L);  /* call it */
   L->nCcalls--;

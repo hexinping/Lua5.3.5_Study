@@ -344,7 +344,7 @@ static void auxsetnode (lua_State *L, void *ud) {
 }
 
 /**
- * 重新设置Table的大小
+ * 重新设置Table的大小 
  * 说明：luaH_new方法仅仅是初始化了一个Table，真正Table容器大小，需要调用此方法实现
  *
  * nasize：数组节点的大小

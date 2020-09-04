@@ -44,9 +44,9 @@
 */
 
 /* Variant tags for functions */
-#define LUA_TLCL	(LUA_TFUNCTION | (0 << 4))  /* Lua closure */
-#define LUA_TLCF	(LUA_TFUNCTION | (1 << 4))  /* light C function */
-#define LUA_TCCL	(LUA_TFUNCTION | (2 << 4))  /* C closure */
+#define LUA_TLCL	(LUA_TFUNCTION | (0 << 4))  /* Lua closure  Lua方法 */
+#define LUA_TLCF	(LUA_TFUNCTION | (1 << 4))  /* light C function C语言函数 */
+#define LUA_TCCL	(LUA_TFUNCTION | (2 << 4))  /* C closure C语言闭包函数 */
 
 
 /* Variant tags for strings */

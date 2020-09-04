@@ -600,9 +600,12 @@ int main (int argc, char **argv) {
     l_message(argv[0], "cannot create state: not enough memory");
     return EXIT_FAILURE;
   }
+  //向数据栈上push了一个c语言的闭包方法pmain, 用于命令行参数的解析、Lua语言默认库的加载、Lua脚本语言的解析和调用等
   lua_pushcfunction(L, &pmain);  /* to call 'pmain' in protected mode */
   lua_pushinteger(L, argc);  /* 1st argument */
   lua_pushlightuserdata(L, argv); /* 2nd argument */
+
+  //方法调用： 从栈上拿两个2参数，然后调用pmain（这个时候pmain也会出栈），调用完返回一个返回值到栈顶
   status = lua_pcall(L, 2, 1, 0);  /* do the call */
   result = lua_toboolean(L, -1);  /* get result */
   report(L, status);
