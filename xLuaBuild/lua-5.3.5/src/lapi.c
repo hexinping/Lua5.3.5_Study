@@ -718,7 +718,16 @@ LUA_API int lua_gettable (lua_State *L, int idx) {
   return ttnov(L->top - 1);
 }
 
+/**
+ * 把 t[k] 值压入堆栈顶部， 这里的 t 是指有效索引 index 指向的值
+ * L->top=LUA_LOADED_TABLE[k]
+ * L->top=Table[k]
+ *
+ * lua_getfield(L, LUA_REGISTRYINDEX, LUA_LOADED_TABLE) //从全局注册表上找LUA_LOADED_TABLE，放置到L->top
+ * lua_getfield(L, 1, 'k') //从栈上找对对应Table，并将T[k]的值取出，压入堆栈L->top
 
+ 说白了就是 根据idx 从栈上找一个table t，然后获取t[k], 压到栈顶
+ */
 LUA_API int lua_getfield (lua_State *L, int idx, const char *k) {
   lua_lock(L);
   return auxgetstr(L, index2addr(L, idx), k);
@@ -874,6 +883,17 @@ LUA_API void lua_settable (lua_State *L, int idx) {
 }
 
 
+/**
+ * 将栈顶的值L->top，赋值到T[k]上，并调整L->top指针L->top--,pop弹出栈顶值
+ * idx索引（栈地址 or 全局注册表）
+ * LUA_REGISTRYINDEX[c]=L->top-1
+ * Table[x]=L->top-1
+ *
+ * lua_setfield(L, LUA_REGISTRYINDEX, "c");// 将栈顶的值 赋值 到全局变量[c]中
+ * lua_setfield(L, idx, "x") //将栈顶的值 赋值 到栈idx[x]上
+
+  说白了 就是根据index的值，来从栈上找到一个table t, 并且把栈顶元素赋值给t[k] = 栈顶值  --》 栈顶会出栈
+ */
 LUA_API void lua_setfield (lua_State *L, int idx, const char *k) {
   lua_lock(L);  /* unlock done in 'auxsetstr' */
   auxsetstr(L, index2addr(L, idx), k);
@@ -1037,7 +1057,9 @@ struct CallS {  /* data to 'f_call' */
   int nresults;
 };
 
-
+/**
+ * 该方法包了很多层，最终调用luaD_call方法
+ */
 static void f_call (lua_State *L, void *ud) {
   struct CallS *c = cast(struct CallS *, ud);
   luaD_callnoyield(L, c->func, c->nresults);
@@ -1063,10 +1085,10 @@ LUA_API int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
     api_checkstackindex(L, errfunc, o);
     func = savestack(L, o);
   }
-  c.func = L->top - (nargs+1);  /* function to be called */
+  c.func = L->top - (nargs+1);  /* function to be called 这里拿到的就是除去参数后栈顶的元素*/
   if (k == NULL || L->nny > 0) {  /* no continuation or no yieldable? */
     c.nresults = nresults;  /* do a 'conventional' protected call */
-    status = luaD_pcall(L, f_call, &c, savestack(L, c.func), func);
+    status = luaD_pcall(L, f_call, &c, savestack(L, c.func), func); // 函数调用
   }
   else {  /* prepare continuation (call is already protected by 'resume') */
     CallInfo *ci = L->ci;
@@ -1078,7 +1100,7 @@ LUA_API int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
     L->errfunc = func;
     setoah(ci->callstatus, L->allowhook);  /* save value of 'allowhook' */
     ci->callstatus |= CIST_YPCALL;  /* function can do error recovery */
-    luaD_call(L, c.func, nresults);  /* do the call */
+    luaD_call(L, c.func, nresults);  /* do the call  函数调用*/
     ci->callstatus &= ~CIST_YPCALL;
     L->errfunc = ci->u.c.old_errfunc;
     status = LUA_OK;  /* if it is here, there were no errors */
