@@ -24,7 +24,13 @@ static lua_State *getco (lua_State *L) {
   return co;
 }
 
-
+/**
+ * resume 核心操作方法
+  L：表示原始线程栈
+  co：表示要启动的线程栈
+  如果返回值不是LUA_OK或LUA_YIELD，则表示出错：将co栈顶的错误对象转移到L栈顶
+  否则表示协程函数返回或中途有yield操作：将co栈中的返回值全部转移到L栈
+ */
 static int auxresume (lua_State *L, lua_State *co, int narg) {
   int status;
   if (!lua_checkstack(co, narg)) {
@@ -35,7 +41,7 @@ static int auxresume (lua_State *L, lua_State *co, int narg) {
     lua_pushliteral(L, "cannot resume dead coroutine");
     return -1;  /* error flag */
   }
-  lua_xmove(L, co, narg);
+  lua_xmove(L, co, narg); //将L上的栈数据拷贝到co上
   status = lua_resume(co, L, narg);
   if (status == LUA_OK || status == LUA_YIELD) {
     int nres = lua_gettop(co);
@@ -53,9 +59,13 @@ static int auxresume (lua_State *L, lua_State *co, int narg) {
   }
 }
 
-
+/**
+ * 启动/恢复协程程序
+ 参数：L=当前启动栈，from=原始栈，nargs=参数个数
+ lua_resume没有参数用于指出期望的结果数量，它总是返回被调用函数的所有结果；
+ */
 static int luaB_coresume (lua_State *L) {
-  lua_State *co = getco(L);
+  lua_State *co = getco(L); //获取协程栈
   int r;
   r = auxresume(L, co, lua_gettop(L) - 1);
   if (r < 0) {
@@ -85,13 +95,17 @@ static int luaB_auxwrap (lua_State *L) {
   return r;
 }
 
-
+/**
+ * 协程创建函数，会独立创建一个Lua栈结构
+ * Lua：newProductor = coroutine.create(productor)
+ * Lua创建一个协程的时候，入参为协程回调的函数名
+ */
 static int luaB_cocreate (lua_State *L) {
   lua_State *NL;
   luaL_checktype(L, 1, LUA_TFUNCTION);
-  NL = lua_newthread(L);
-  lua_pushvalue(L, 1);  /* move function to top */
-  lua_xmove(L, NL, 1);  /* move function from L to NL */
+  NL = lua_newthread(L);  /* new一个新协程 */
+  lua_pushvalue(L, 1);  /* 将CallInfo操作栈上的协程回调函数，移动到L->top数据栈顶部 move function to top */
+  lua_xmove(L, NL, 1);  /*拷贝回调函数到协程的数据栈上 to NL */
   return 1;
 }
 
@@ -102,7 +116,12 @@ static int luaB_cowrap (lua_State *L) {
   return 1;
 }
 
-
+/**
+ * 协程挂起函数
+ *
+ * L为当前协程函数的协程栈
+ * lua_gettop(L)  获取当前操作函数到栈顶的栈个数
+ */
 static int luaB_yield (lua_State *L) {
   return lua_yield(L, lua_gettop(L));
 }
