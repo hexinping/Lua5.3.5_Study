@@ -182,11 +182,12 @@ static void freestack (lua_State *L) {
 
 /*
 ** Create registry table and its predefined values
+** 创建一个注册表，并且定义默认值
 */
 static void init_registry (lua_State *L, global_State *g) {
   TValue temp;
   /* create registry */
-  Table *registry = luaH_new(L);
+  Table *registry = luaH_new(L); //创建一个Table表
   sethvalue(L, &g->l_registry, registry);
   luaH_resize(L, registry, LUA_RIDX_LAST, 0);
   /* registry[LUA_RIDX_MAINTHREAD] = L */
@@ -264,6 +265,11 @@ static void close_state (lua_State *L) {
 }
 
 
+/**
+ * 创建一个新的线程栈
+ * LUA在main函数中，调用luaL_newstate()方法，创建了主线程（既：lua_State *L）
+ * 主要用于实现Lua的协程实现（Lua没有多线程实现）
+ */
 LUA_API lua_State *lua_newthread (lua_State *L) {
   global_State *g = G(L);
   lua_State *L1;
@@ -277,7 +283,7 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
   L1->next = g->allgc;
   g->allgc = obj2gco(L1);
   /* anchor it on L stack */
-  setthvalue(L, L->top, L1);
+  setthvalue(L, L->top, L1); //栈顶上 设置一个新的L1对象
   api_incr_top(L);
   preinit_thread(L1, g);
   L1->hookmask = L->hookmask;

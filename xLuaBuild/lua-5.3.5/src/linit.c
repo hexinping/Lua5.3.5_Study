@@ -38,11 +38,13 @@
 /*
 ** these libs are loaded by lua.c and are readily available to any Lua
 ** program
+LUA标准库常量
+定义标准库名称 & 启动的方法
 */
 static const luaL_Reg loadedlibs[] = {
   {"_G", luaopen_base},
   {LUA_LOADLIBNAME, luaopen_package},
-  {LUA_COLIBNAME, luaopen_coroutine},
+  {LUA_COLIBNAME, luaopen_coroutine}, //扩展库名字 LUA_COLIBNAME  扩展库加载方法 luaopen_coroutine，方法内容必须实现luaL_newlib
   {LUA_TABLIBNAME, luaopen_table},
   {LUA_IOLIBNAME, luaopen_io},
   {LUA_OSLIBNAME, luaopen_os},

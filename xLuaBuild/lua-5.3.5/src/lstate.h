@@ -92,7 +92,7 @@ typedef struct stringtable {
 typedef struct CallInfo {
   StkId func;  /* function index in the stack 当前调用栈的调用指针处 */
   StkId	top;  /* top for this function 调用栈的栈顶 */
-  struct CallInfo *previous, *next;  /* dynamic call link */
+  struct CallInfo *previous, *next;  /* dynamic call link  双向链表*/
   union {
     struct {  /* only for Lua functions */
       StkId base;  /* base for this function */

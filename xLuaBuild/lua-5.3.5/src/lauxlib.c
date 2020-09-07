@@ -968,19 +968,29 @@ LUALIB_API int luaL_getsubtable (lua_State *L, int idx, const char *fname) {
 ** if 'glb' is true, also registers the result in the global table.
 ** Leaves resulting module on the top.
 */
+/*
+ * 加载系统模块
+ * modname：模块名称
+ * openf：回调函数
+*/
 LUALIB_API void luaL_requiref (lua_State *L, const char *modname,
                                lua_CFunction openf, int glb) {
+   /* 获取注册表&G(L)->l_registry，如果不存在则创建注册表 */
   luaL_getsubtable(L, LUA_REGISTRYINDEX, LUA_LOADED_TABLE);
   lua_getfield(L, -1, modname);  /* LOADED[modname] */
+
+  /* 如果包没有加载，则重新加载 */
   if (!lua_toboolean(L, -1)) {  /* package not already loaded? */
-    lua_pop(L, 1);  /* remove field */
-    lua_pushcfunction(L, openf);
-    lua_pushstring(L, modname);  /* argument to open function */
+    lua_pop(L, 1);  /* remove field 栈顶设置为nil  */
+    lua_pushcfunction(L, openf); //将openf设置到栈顶L->top->f的方法上
+    lua_pushstring(L, modname);  /* argument to open function 将openf设置到栈顶L->top->gc上 */
     lua_call(L, 1, 1);  /* call 'openf' to open module */
     lua_pushvalue(L, -1);  /* make copy of module (call result) */
     lua_setfield(L, -3, modname);  /* LOADED[modname] = module */
   }
   lua_remove(L, -2);  /* remove LOADED table */
+
+  /* glb=true 则注册到全局表；例如LUA标准库，则会注册到全局表 */
   if (glb) {
     lua_pushvalue(L, -1);  /* copy of module */
     lua_setglobal(L, modname);  /* _G[modname] = module */

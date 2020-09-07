@@ -568,7 +568,9 @@ static int pmain (lua_State *L) {
     lua_pushboolean(L, 1);  /* signal for libraries to ignore env. vars. */
     lua_setfield(L, LUA_REGISTRYINDEX, "LUA_NOENV");
   }
+  /* 打开常规Lua的标准库 */
   luaL_openlibs(L);  /* open standard libraries */
+
   createargtable(L, argv, argc, script);  /* create table 'arg' */
   if (!(args & has_E)) {  /* no option '-E'? */
     if (handle_luainit(L) != LUA_OK)  /* run LUA_INIT */
@@ -588,7 +590,7 @@ static int pmain (lua_State *L) {
     }
     else dofile(L, NULL);  /* executes stdin as a file */
   }
-  lua_pushboolean(L, 1);  /* signal no errors */
+  lua_pushboolean(L, 1);  /* 向栈顶L->top PUSH 返回值 signal no errors */
   return 1;
 }
 
@@ -601,13 +603,13 @@ int main (int argc, char **argv) {
     return EXIT_FAILURE;
   }
   //向数据栈上push了一个c语言的闭包方法pmain, 用于命令行参数的解析、Lua语言默认库的加载、Lua脚本语言的解析和调用等
-  lua_pushcfunction(L, &pmain);  /* to call 'pmain' in protected mode */
-  lua_pushinteger(L, argc);  /* 1st argument */
-  lua_pushlightuserdata(L, argv); /* 2nd argument */
+  lua_pushcfunction(L, &pmain);  /* to call 'pmain' in protected mode  将pmain放入L结构上 L->top值&pmain*/
+  lua_pushinteger(L, argc);  /* 1st argument 将argc 放入L结构上  L->top值argc */
+  lua_pushlightuserdata(L, argv); /* 2nd argument  将argv 放入L结构上 L->top值argv */
 
-  //方法调用： 从栈上拿两个2参数，然后调用pmain（这个时候pmain也会出栈），调用完返回一个返回值到栈顶
-  status = lua_pcall(L, 2, 1, 0);  /* do the call */
-  result = lua_toboolean(L, -1);  /* get result */
+  //方法调用： 从栈上拿两个2参数（出栈了），然后调用pmain（这个时候pmain也会出栈），调用完返回一个返回值到栈顶
+  status = lua_pcall(L, 2, 1, 0);  /* do the call 函数操作，执行pmain 函数 */
+  result = lua_toboolean(L, -1);  /* 获取pmain函数lua_pushboolean(L, 1) 的信号值get result */
   report(L, status);
   lua_close(L);
   return (result && status == LUA_OK) ? EXIT_SUCCESS : EXIT_FAILURE;

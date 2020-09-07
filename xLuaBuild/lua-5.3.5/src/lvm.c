@@ -1151,9 +1151,9 @@ void luaV_execute (lua_State *L) {
         }
         else {
           /* tail call: put called frame (n) in place of caller one (o) */
-          CallInfo *nci = L->ci;  /* called frame */
+          CallInfo *nci = L->ci;  /* called frame  当前调用函数*/
           CallInfo *oci = nci->previous;  /* caller frame */
-          StkId nfunc = nci->func;  /* called function */
+          StkId nfunc = nci->func;  /* called function  当前调用栈的调用指针处*/
           StkId ofunc = oci->func;  /* caller function */
           /* last stack slot filled by 'precall' */
           StkId lim = nci->u.l.base + getproto(nfunc)->numparams;

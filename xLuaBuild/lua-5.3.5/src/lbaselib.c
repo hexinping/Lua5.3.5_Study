@@ -485,12 +485,15 @@ static const luaL_Reg base_funcs[] = {
 
 LUAMOD_API int luaopen_base (lua_State *L) {
   /* open lib into global table */
+  /* 打开全局环境变量数组LUA_RIDX_GLOBALS，放置到栈顶L->top open lib into global table */
   lua_pushglobaltable(L);
+  /* 将base_funcs中的函数，逐个设置到LUA_RIDX_GLOBALS数组上 */
   luaL_setfuncs(L, base_funcs, 0);
   /* set global _G */
-  lua_pushvalue(L, -1);
-  lua_setfield(L, -2, "_G");
-  /* set global _VERSION */
+  /* LUA_RIDX_GLOBALS[_G] = LUA_RIDX_GLOBALS*/
+  lua_pushvalue(L, -1); 
+  lua_setfield(L, -2, "_G"); //弹出栈顶L->top--
+  /* /* LUA_RIDX_GLOBALS[_VERSION] = LUA_VERSION set global _VERSION */
   lua_pushliteral(L, LUA_VERSION);
   lua_setfield(L, -2, "_VERSION");
   return 1;
