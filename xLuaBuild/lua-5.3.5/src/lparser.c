@@ -1608,6 +1608,10 @@ static void statement (LexState *ls) {
 /*
 ** compiles the main function, which is a regular vararg function with an
 ** upvalue named LUA_ENV
+
+luaX_next：主要用于语法TOKEN的分割，是语法分割器；
+statlist：主要根据luaX_next分割器分割出来的TOKEN，组装成语法块语句statement，最后将语句逐个组装成语法树
+
 */
 static void mainfunc (LexState *ls, FuncState *fs) {
   BlockCnt bl;
@@ -1616,13 +1620,17 @@ static void mainfunc (LexState *ls, FuncState *fs) {
   fs->f->is_vararg = 1;  /* main function is always declared vararg */
   init_exp(&v, VLOCAL, 0);  /* create and... */
   newupvalue(fs, ls->envn, &v);  /* ...set environment upvalue */
-  luaX_next(ls);  /* read first token */
-  statlist(ls);  /* parse main body */
+  luaX_next(ls);  /* 读取第一个token read first token   luaX_next：主要用于语法TOKEN的分割 */
+  statlist(ls);  /* 语法树遍历解析 parse main body  据luaX_next分割器分割出来的TOKEN，组装成语法块语句statement，最后将语句逐个组装成语法树 */
   check(ls, TK_EOS);
   close_func(ls);
 }
 
-
+//真正执行语法树解析的是luaY_parser函数
+/*
+  该函数内部主要用于组装：语法状态结构：LexState和方法状态结构：FuncState
+  最后执行mainfunc方法，用于执行语法树的解析工作
+*/
 LClosure *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
                        Dyndata *dyd, const char *name, int firstchar) {
   LexState lexstate;
@@ -1640,7 +1648,10 @@ LClosure *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
   lexstate.dyd = dyd;
   dyd->actvar.n = dyd->gt.n = dyd->label.n = 0;
   luaX_setinput(L, &lexstate, z, funcstate.f->source, firstchar);
+
+  //执行mainfunc方法，用于执行语法树的解析工作
   mainfunc(&lexstate, &funcstate);
+
   lua_assert(!funcstate.prev && funcstate.nups == 1 && !lexstate.fs);
   /* all scopes should be correctly finished */
   lua_assert(dyd->actvar.n == 0 && dyd->gt.n == 0 && dyd->label.n == 0);

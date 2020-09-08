@@ -819,18 +819,26 @@ static void f_parser (lua_State *L, void *ud) {
   struct SParser *p = cast(struct SParser *, ud);
   int c = zgetc(p->z);  /* read first character */
   if (c == LUA_SIGNATURE[0]) {
+     //二进制类型
     checkmode(L, p->mode, "binary");
     cl = luaU_undump(L, p->z, p->name);
   }
   else {
+     //文本类型，使用luaY_parser调用
     checkmode(L, p->mode, "text");
+
+    //真正执行语法树解析的是luaY_parser函数
     cl = luaY_parser(L, p->z, &p->buff, &p->dyd, p->name, c);
-  }
+  } 
   lua_assert(cl->nupvalues == cl->p->sizeupvalues);
   luaF_initupvals(L, cl);
 }
 
 
+/**
+ * 文件解析函数（保护方式调用）
+ * 调用：luaD_pcall方法
+ */
 int luaD_protectedparser (lua_State *L, ZIO *z, const char *name,
                                         const char *mode) {
   struct SParser p;
@@ -841,7 +849,10 @@ int luaD_protectedparser (lua_State *L, ZIO *z, const char *name,
   p.dyd.gt.arr = NULL; p.dyd.gt.size = 0;
   p.dyd.label.arr = NULL; p.dyd.label.size = 0;
   luaZ_initbuffer(L, &p.buff);
+
+  //luaD_pcall执行的时候回调了f_parser函数。
   status = luaD_pcall(L, f_parser, &p, savestack(L, L->top), L->errfunc);
+
   luaZ_freebuffer(L, &p.buff);
   luaM_freearray(L, p.dyd.actvar.arr, p.dyd.actvar.size);
   luaM_freearray(L, p.dyd.gt.arr, p.dyd.gt.size);

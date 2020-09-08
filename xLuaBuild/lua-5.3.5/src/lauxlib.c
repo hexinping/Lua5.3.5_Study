@@ -725,7 +725,10 @@ LUALIB_API int luaL_loadfilex (lua_State *L, const char *filename,
   }
   if (c != EOF)
     lf.buff[lf.n++] = c;  /* 'c' is the first character of the stream */
+
+  /* 加载文件，文件和解析文件；如果多个文件嵌套，则嵌套加载 */
   status = lua_load(L, getF, &lf, lua_tostring(L, -1), mode);
+
   readstatus = ferror(lf.f);
   if (filename) fclose(lf.f);  /* close file (even in case of errors) */
   if (readstatus) {
