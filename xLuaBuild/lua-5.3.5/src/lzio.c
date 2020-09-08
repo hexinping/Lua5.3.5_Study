@@ -19,18 +19,20 @@
 #include "lstate.h"
 #include "lzio.h"
 
-
+/**
+ * 读取文件
+ */
 int luaZ_fill (ZIO *z) {
   size_t size;
   lua_State *L = z->L;
   const char *buff;
   lua_unlock(L);
-  buff = z->reader(L, z->data, &size);
+  buff = z->reader(L, z->data, &size); //文件读取，返回size 大小 getF方法
   lua_lock(L);
   if (buff == NULL || size == 0)
     return EOZ;
   z->n = size - 1;  /* discount char being returned */
-  z->p = buff;
+  z->p = buff; //起始地址指向buf开始地址
   return cast_uchar(*(z->p++));
 }
 

@@ -639,6 +639,7 @@ typedef struct LoadF {
 } LoadF;
 
 
+/*文件读取方法*/
 static const char *getF (lua_State *L, void *ud, size_t *size) {
   LoadF *lf = (LoadF *)ud;
   (void)L;  /* not used */
