@@ -425,11 +425,16 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
                                    luaZ_bufflen(ls->buff) - 2);
 }
 
-
+/**
+ * Token解析函数，逐个读取字符流
+ * 其中next函数：从ZIO文件流上读取下一个字符
+ * 完成一个Token的切割，则返回Token结果
+ */
 static int llex (LexState *ls, SemInfo *seminfo) {
   luaZ_resetbuffer(ls->buff);
   for (;;) {
     switch (ls->current) {
+      /* 换行符号 ，跳过 */
       case '\n': case '\r': {  /* line breaks */
         inclinenumber(ls);
         break;
@@ -458,6 +463,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         break;
       }
       case '[': {  /* long string or simply '[' */
+      /* 长字符串处理 */
         int sep = skip_sep(ls);
         if (sep >= 0) {
           read_long_string(ls, seminfo, sep);
@@ -521,6 +527,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         return TK_EOS;
       }
       default: {
+        /* 变量名称等处理/关键字 */
         if (lislalpha(ls->current)) {  /* identifier or reserved word? */
           TString *ts;
           do {
