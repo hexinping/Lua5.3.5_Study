@@ -39,17 +39,17 @@ enum RESERVED {
 /* number of reserved words */
 #define NUM_RESERVED	(cast(int, TK_WHILE-FIRST_RESERVED+1))
 
-
+//语义辅助信息
 typedef union {
   lua_Number r;
   lua_Integer i;
   TString *ts;
-} SemInfo;  /* semantics information */
+} SemInfo;  /* 语义信息 semantics information */
 
-
+//语义分割最小单位Token
 typedef struct Token {
-  int token;
-  SemInfo seminfo;
+  int token; //Token类型
+  SemInfo seminfo; //语义信息，例如token为字符串/数字等都需要存储具体的值
 } Token;
 
 
